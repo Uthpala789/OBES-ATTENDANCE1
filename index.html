@@ -1,0 +1,2337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>School Management System</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👨‍🏫</text></svg>">
+    <!-- Face API.js for facial recognition -->
+    <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+    <!-- jsPDF for PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        /* --- CSS Variables for Theming --- */
+        :root {
+            --primary-color: #4f46e5;
+            --primary-hover: #4338ca;
+            --secondary-color: #06b6d4;
+            --background-color: #f8fafc;
+            --surface-color: #ffffff;
+            --sidebar-bg: #0f172a;
+            --sidebar-text: #94a3b8;
+            --sidebar-hover: #1e293b;
+            --text-color: #1e293b;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+            --success-color: #10b981;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+
+        /* --- Global Styles & Resets --- */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: var(--font-family); background-color: var(--background-color); color: var(--text-color); line-height: 1.6; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 0 1.5rem; }
+
+        /* --- Icon Utility --- */
+        .icon { display: inline-block; width: 1.2em; height: 1.2em; vertical-align: middle; stroke-width: 0; stroke: currentColor; fill: currentColor; }
+
+        /* --- Typography --- */
+        h1, h2, h3 { font-weight: 700; }
+        h1 { font-size: 2rem; }
+        h2 { font-size: 1.5rem; }
+        h3 { font-size: 1.25rem; }
+
+        /* --- Utility Classes --- */
+        .btn {
+            padding: 0.625rem 1.25rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+            font-size: 0.875rem;
+            position: relative;
+            overflow: hidden;
+        }
+        .btn::before { content: ''; position: absolute; top: 50%; left: 50%; width: 0; height: 0; border-radius: 50%; background: rgba(255, 255, 255, 0.5); transform: translate(-50%, -50%); transition: width 0.6s, height 0.6s; }
+        .btn:active::before { width: 300px; height: 300px; }
+        .btn-primary { background-color: var(--primary-color); color: white; }
+        .btn-primary:hover { background-color: var(--primary-hover); transform: translateY(-2px); box-shadow: 0 10px 20px rgba(79, 70, 229, 0.3); }
+        .btn-secondary { background-color: var(--secondary-color); color: white; }
+        .btn-success { background-color: var(--success-color); color: white; }
+        .btn-danger { background-color: var(--danger-color); color: white; }
+        .btn-outline { background-color: transparent; border: 1px solid var(--border-color); color: var(--text-color); }
+        .btn-outline:hover { background-color: var(--surface-color); }
+        .btn-sm { padding: 0.4rem 0.8rem; font-size: 0.8rem; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+
+        .card {
+            background-color: var(--surface-color);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.03);
+            border: 1px solid var(--border-color);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .card:hover { transform: translateY(-2px); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); }
+
+        .form-group { margin-bottom: 1.25rem; }
+        .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.875rem; color: var(--text-color); }
+        .form-control {
+            width: 100%;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            border: 1px solid var(--border-color);
+            font-size: 1rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .form-control:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); }
+
+        /* --- Layout --- */
+        .app-container { display: flex; min-height: 100vh; }
+        .sidebar {
+            width: 280px;
+            background-color: var(--sidebar-bg);
+            color: var(--sidebar-text);
+            padding: 2rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+        }
+        .main-content { flex-grow: 1; display: flex; flex-direction: column; }
+        .header {
+            background-color: var(--surface-color);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1.5rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+        }
+
+        /* --- Sidebar --- */
+        .sidebar-header {
+            font-size: 1.75rem;
+            font-weight: 800;
+            color: var(--surface-color);
+            margin-bottom: 3rem;
+            text-align: center;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--sidebar-hover);
+        }
+        .nav-menu { list-style: none; flex-grow: 1; }
+        .nav-item { margin-bottom: 0.75rem; }
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.875rem 1rem;
+            border-radius: 0.75rem;
+            color: var(--sidebar-text);
+            text-decoration: none;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .nav-link:hover, .nav-link.active { background-color: var(--primary-color); color: var(--surface-color); transform: translateX(5px); }
+
+        /* --- Page Sections --- */
+        .page { display: none; padding: 2rem; flex-grow: 1; }
+        .page.active { display: block; animation: fadeIn 0.4s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .page-header { margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center; }
+        .grid { display: grid; gap: 1.5rem; }
+        .grid-cols-1 { grid-template-columns: repeat(1, 1fr); }
+        .grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
+        .grid-cols-3 { grid-template-columns: repeat(3, 1fr); }
+        .grid-cols-4 { grid-template-columns: repeat(4, 1fr); }
+
+        /* --- Dashboard --- */
+        .stat-card { text-align: center; padding: 2rem 1.5rem; }
+        .stat-value { font-size: 3rem; font-weight: 800; color: var(--primary-color); line-height: 1; }
+        .stat-label { color: var(--text-muted); font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.1em; margin-top: 0.5rem; }
+
+        /* --- Tables --- */
+        .table-container { overflow-x: auto; margin-top: 1.5rem; }
+        .data-table { width: 100%; border-collapse: collapse; }
+        .data-table th, .data-table td { padding: 1rem; text-align: left; border-bottom: 1px solid var(--border-color); }
+        .data-table th { font-weight: 600; color: var(--text-muted); background-color: var(--background-color); }
+        .data-table tbody tr { transition: background-color 0.2s; }
+        .data-table tbody tr:hover { background-color: var(--background-color); }
+        .badge { padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
+        .badge-success { background-color: #d1fae5; color: #065f46; }
+        .badge-danger { background-color: #fee2e2; color: #991b1b; }
+        .badge-warning { background-color: #fef3c7; color: #92400e; }
+        
+        /* Skeleton Loader */
+        .skeleton { background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: loading 1.5s infinite; }
+        @keyframes loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        .skeleton-row { height: 60px; margin-bottom: 10px; border-radius: 0.5rem; }
+
+        .empty-state { text-align: center; padding: 3rem; color: var(--text-muted); }
+        .empty-state svg { width: 5rem; height: 5rem; margin-bottom: 1rem; opacity: 0.4; }
+        
+        /* Image Upload & Preview */
+        .image-upload-container { display: flex; align-items: center; gap: 1.5rem; }
+        .image-preview { width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 4px solid var(--border-color); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        .image-preview-placeholder {
+            width: 100px; height: 100px; border-radius: 50%; background-color: var(--background-color);
+            display: flex; align-items: center; justify-content: center; color: var(--text-muted);
+            font-size: 2rem; border: 3px dashed var(--border-color);
+        }
+
+        /* --- Camera View --- */
+        .camera-view {
+            background-color: #000;
+            border-radius: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+            height: 320px;
+            position: relative;
+            overflow: hidden;
+        }
+        .camera-view video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+        .camera-view.scanning::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(79, 70, 229, 0.6), transparent);
+            animation: scan 2s linear infinite;
+        }
+        @keyframes scan { to { left: 100%; } }
+        .scan-result {
+            text-align: center;
+            padding: 1rem;
+            margin-top: 1rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        .scan-result.success { background-color: var(--success-color); color: white; }
+        .scan-result.error { background-color: var(--danger-color); color: white; }
+        .scan-result.info { background-color: var(--primary-color); color: white; }
+
+        /* --- Loading Overlay --- */
+        .loading-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background-color: rgba(15, 23, 42, 0.9);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            font-size: 1.2rem;
+        }
+        .loading-overlay.hidden { display: none; }
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            border-top: 4px solid var(--primary-color);
+            width: 50px; height: 50px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1.5rem;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* --- Modal --- */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal.active {
+            display: flex;
+        }
+        .modal-content {
+            background-color: var(--surface-color);
+            border-radius: 1rem;
+            padding: 2rem;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-muted);
+        }
+
+        /* --- Tabs --- */
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 1.5rem;
+        }
+        .tab {
+            padding: 0.75rem 1.5rem;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .tab.active {
+            color: var(--primary-color);
+            border-bottom-color: var(--primary-color);
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        /* --- Responsive --- */
+        @media (max-width: 1024px) { .grid-cols-4 { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 768px) {
+            .app-container { flex-direction: column; }
+            .sidebar { width: 100%; height: auto; padding: 1rem; }
+            .nav-menu { display: flex; overflow-x: auto; }
+            .grid-cols-2, .grid-cols-3 { grid-template-columns: 1fr; }
+            .page-header { flex-direction: column; align-items: flex-start; gap: 1rem; }
+            .image-upload-container { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- LOADING OVERLAY FOR FACE-API -->
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="spinner"></div>
+        <p id="loading-text">Initializing System...</p>
+        <div id="loading-progress" style="margin-top: 1rem; width: 300px; height: 10px; background-color: rgba(255,255,255,0.2); border-radius: 5px; overflow: hidden;">
+            <div id="progress-bar" style="height: 100%; width: 0%; background-color: var(--primary-color); transition: width 0.3s;"></div>
+        </div>
+        <button id="skip-loading" class="btn btn-outline" style="margin-top: 1.5rem; display: none;" onclick="skipModelLoading()">Skip Face Recognition Setup</button>
+    </div>
+
+    <!-- LOGIN PAGE -->
+    <div id="login-page" class="login-container" style="display: flex; align-items: center; justify-content: min-height: 100vh; background: linear-gradient(135deg, var(--sidebar-bg), var(--primary-color));">
+        <div class="container">
+            <div class="login-form" style="max-width: 420px; margin: auto;">
+                <div class="card login-card" style="padding: 2.5rem;">
+                    <div class="login-header" style="text-align: center; margin-bottom: 2rem;">
+                        <h1 style="color: var(--primary-color);">School Portal</h1>
+                        <p style="color: var(--text-muted);">Sign in to manage your system</p>
+                    </div>
+                    <div class="tabs">
+                        <div class="tab active" onclick="switchTab('login-tab', 'password-login')">Password</div>
+                        <div class="tab" onclick="switchTab('login-tab', 'face-login')">Face Recognition</div>
+                    </div>
+                    <div id="password-login" class="tab-content active">
+                        <form id="login-form" onsubmit="handleLogin(event)">
+                            <div class="form-group">
+                                <label for="username">Username</label>
+                                <input type="text" id="username" class="form-control" placeholder="Enter your username" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="password">Password</label>
+                                <input type="password" id="password" class="form-control" placeholder="Enter your password" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary" style="width: 100%;">Sign In</button>
+                            <p style="text-align: center; margin-top: 1rem; font-size: 0.875rem; color: var(--text-muted);">Demo: use <strong>admin</strong> / <strong>password</strong></p>
+                        </form>
+                    </div>
+                    <div id="face-login" class="tab-content">
+                        <div id="login-camera-view" class="camera-view" style="height: 240px; margin-bottom: 1rem;">
+                            <span>Camera is Off</span>
+                        </div>
+                        <button id="login-camera-btn" class="btn btn-primary" style="width: 100%;" onclick="toggleLoginCamera()">Start Camera</button>
+                        <div id="login-camera-result" style="margin-top: 1rem;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN APPLICATION -->
+    <div id="app" class="app-container" style="display: none;">
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+            <div class="sidebar-header">School System</div>
+            <nav>
+                <ul class="nav-menu">
+                    <li class="nav-item"><a class="nav-link active" onclick="showPage('dashboard-page', 'Dashboard')">
+                        <svg class="icon" viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>Dashboard
+                    </a></li>
+                    <li class="nav-item"><a class="nav-link" onclick="showPage('prefects-page', 'Prefect Management')">
+                        <svg class="icon" viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>Prefects
+                    </a></li>
+                    <li class="nav-item"><a class="nav-link" onclick="showPage('teachers-page', 'Teacher Management')">
+                        <svg class="icon" viewBox="0 0 24 24"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>Teachers
+                    </a></li>
+                    <li class="nav-item"><a class="nav-link" onclick="showPage('visitors-page', 'Visitor Management')">
+                        <svg class="icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>Visitors
+                    </a></li>
+                    <li class="nav-item"><a class="nav-link" onclick="showPage('attendance-page', 'Attendance Tracking')">
+                        <svg class="icon" viewBox="0 0 24 24"><path d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z"/></svg>Attendance
+                    </a></li>
+                    <li class="nav-item"><a class="nav-link" onclick="showPage('logbook-page', 'Digital Logbook')">
+                        <svg class="icon" viewBox="0 0 24 24"><path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm2 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>Logbook
+                    </a></li>
+                    <li class="nav-item"><a class="nav-link" onclick="showPage('announcements-page', 'Announcements')">
+                        <svg class="icon" viewBox="0 0 24 24"><path d="M22 7c0-.55-.45-1-1-1h-6V3c0-.55-.45-1-1-1h-4c-.55 0-1 .45-1 1v3H3c-.55 0-1 .45-1 1s.45 1 1 1h1v11c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8h1c.55 0 1-.45 1-1zM10 4h4v2h-4V4zm8 15H6V8h12v11z"/></svg>Announcements
+                    </a></li>
+                    <li class="nav-item"><a class="nav-link" onclick="showPage('settings-page', 'Settings & Data')">
+                        <svg class="icon" viewBox="0 0 24 24"><path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/></svg>Settings
+                    </a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- MAIN CONTENT AREA -->
+        <main class="main-content">
+            <!-- HEADER -->
+            <header class="header">
+                <h2 id="page-title">Dashboard</h2>
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <span>Welcome, <strong id="user-name">Admin</strong></span>
+                    <button class="btn btn-outline btn-sm" onclick="handleLogout()">Logout</button>
+                </div>
+            </header>
+
+            <!-- DASHBOARD PAGE -->
+            <div id="dashboard-page" class="page active">
+                <div class="page-header"><h1>System Overview</h1></div>
+                <div class="grid grid-cols-4">
+                    <div class="card stat-card"><div class="stat-value" id="total-prefects">0</div><div class="stat-label">Total Prefects</div></div>
+                    <div class="card stat-card"><div class="stat-value" id="total-teachers">0</div><div class="stat-label">Total Teachers</div></div>
+                    <div class="card stat-card"><div class="stat-value" id="total-visitors">0</div><div class="stat-label">Total Visitors</div></div>
+                    <div class="card stat-card"><div class="stat-value" id="present-today">0</div><div class="stat-label">Present Today</div></div>
+                </div>
+                <div class="card" style="margin-top: 1.5rem;">
+                    <h3>Recent Activity</h3>
+                    <div id="recent-activity-list" style="margin-top: 1rem;"><p class="empty-state">No recent activity to display.</p></div>
+                </div>
+            </div>
+
+            <!-- PREFECTS PAGE -->
+            <div id="prefects-page" class="page">
+                <div class="page-header">
+                    <h1>Prefect Management</h1>
+                    <button class="btn btn-primary" onclick="toggleAddPrefectForm()"><svg class="icon" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg> Add New Prefect</button>
+                </div>
+                <div id="add-prefect-form-container" class="card" style="display: none; margin-bottom: 1.5rem;">
+                    <h3>Add New Prefect</h3>
+                    <div class="tabs">
+                        <div class="tab active" onclick="switchTab('prefect-tab', 'manual-entry')">Manual Entry</div>
+                        <div class="tab" onclick="switchTab('prefect-tab', 'camera-entry')">Camera Entry</div>
+                    </div>
+                    <div id="manual-entry" class="tab-content active">
+                        <form onsubmit="addNewPerson(event, 'prefect')">
+                            <div class="grid grid-cols-2">
+                                <div class="form-group"><label for="new-prefect-id">Prefect ID</label><input type="text" id="new-prefect-id" class="form-control" placeholder="e.g., P001" required></div>
+                                <div class="form-group"><label for="new-prefect-name">Full Name</label><input type="text" id="new-prefect-name" class="form-control" placeholder="e.g., Jane Doe" required></div>
+                                <div class="form-group"><label for="new-prefect-position">Position</label><input type="text" id="new-prefect-position" class="form-control" placeholder="e.g., Head Girl" required></div>
+                                <div class="form-group"><label for="new-prefect-class">Class</label><input type="text" id="new-prefect-class" class="form-control" placeholder="e.g., 12A" required></div>
+                            </div>
+                            <div class="form-group">
+                                <label>Photo for Identification (Optional)</label>
+                                <div class="image-upload-container">
+                                    <div id="prefect-image-preview" class="image-preview-placeholder"><svg class="icon" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></div>
+                                    <div>
+                                        <input type="file" id="new-prefect-image" class="form-control" accept="image/*" onchange="previewImage(event, 'prefect')">
+                                        <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem;">Upload a clear, front-facing photo. You can add this later if needed.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-success">Save Prefect</button>
+                        </form>
+                    </div>
+                    <div id="camera-entry" class="tab-content">
+                        <div class="form-group">
+                            <label>Registration Details</label>
+                            <div class="grid grid-cols-2">
+                                <div class="form-group"><label for="prefect-cam-id">Prefect ID</label><input type="text" id="prefect-cam-id" class="form-control" placeholder="e.g., P001" required></div>
+                                <div class="form-group"><label for="prefect-cam-name">Full Name</label><input type="text" id="prefect-cam-name" class="form-control" placeholder="e.g., Jane Doe" required></div>
+                                <div class="form-group"><label for="prefect-cam-position">Position</label><input type="text" id="prefect-cam-position" class="form-control" placeholder="e.g., Head Girl" required></div>
+                                <div class="form-group"><label for="prefect-cam-class">Class</label><input type="text" id="prefect-cam-class" class="form-control" placeholder="e.g., 12A" required></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Capture Photo</label>
+                            <div id="prefect-camera-view" class="camera-view" style="height: 240px; margin-bottom: 1rem;">
+                                <span>Camera is Off</span>
+                            </div>
+                            <div style="display: flex; gap: 1rem;">
+                                <button id="prefect-camera-btn" class="btn btn-primary" style="flex: 1;" onclick="togglePrefectCamera()">Start Camera</button>
+                                <button id="prefect-capture-btn" class="btn btn-success" style="flex: 1;" onclick="capturePrefectPhoto()" disabled>Capture Photo</button>
+                            </div>
+                            <div id="prefect-camera-result" style="margin-top: 1rem;"></div>
+                        </div>
+                        <div class="form-group" style="margin-top: 1.5rem;">
+                            <button type="button" class="btn btn-success" onclick="registerPrefectFromCamera()">Register Prefect</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card"><h3>All Prefects</h3><div id="prefects-table-container"><p class="empty-state">No prefects have been added yet.</p></div></div>
+            </div>
+
+            <!-- TEACHERS PAGE -->
+            <div id="teachers-page" class="page">
+                <div class="page-header">
+                    <h1>Teacher Management</h1>
+                    <button class="btn btn-primary" onclick="toggleAddTeacherForm()"><svg class="icon" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg> Add New Teacher</button>
+                </div>
+                <div id="add-teacher-form-container" class="card" style="display: none; margin-bottom: 1.5rem;">
+                    <h3>Add New Teacher</h3>
+                    <div class="tabs">
+                        <div class="tab active" onclick="switchTab('teacher-tab', 'teacher-manual-entry')">Manual Entry</div>
+                        <div class="tab" onclick="switchTab('teacher-tab', 'teacher-camera-entry')">Camera Entry</div>
+                    </div>
+                    <div id="teacher-manual-entry" class="tab-content active">
+                        <form onsubmit="addNewPerson(event, 'teacher')">
+                            <div class="grid grid-cols-2">
+                                <div class="form-group"><label for="new-teacher-id">Teacher ID</label><input type="text" id="new-teacher-id" class="form-control" placeholder="e.g., T001" required></div>
+                                <div class="form-group"><label for="new-teacher-name">Full Name</label><input type="text" id="new-teacher-name" class="form-control" placeholder="e.g., John Smith" required></div>
+                                <div class="form-group"><label for="new-teacher-subject">Subject</label><input type="text" id="new-teacher-subject" class="form-control" placeholder="e.g., Mathematics" required></div>
+                                <div class="form-group"><label for="new-teacher-class">Class</label><input type="text" id="new-teacher-class" class="form-control" placeholder="e.g., 10B" required></div>
+                            </div>
+                            <div class="form-group">
+                                <label>Photo for Identification (Optional)</label>
+                                <div class="image-upload-container">
+                                    <div id="teacher-image-preview" class="image-preview-placeholder"><svg class="icon" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></div>
+                                    <div>
+                                        <input type="file" id="new-teacher-image" class="form-control" accept="image/*" onchange="previewImage(event, 'teacher')">
+                                        <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem;">Upload a clear, front-facing photo. You can add this later if needed.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-success">Save Teacher</button>
+                        </form>
+                    </div>
+                    <div id="teacher-camera-entry" class="tab-content">
+                        <div class="form-group">
+                            <label>Registration Details</label>
+                            <div class="grid grid-cols-2">
+                                <div class="form-group"><label for="teacher-cam-id">Teacher ID</label><input type="text" id="teacher-cam-id" class="form-control" placeholder="e.g., T001" required></div>
+                                <div class="form-group"><label for="teacher-cam-name">Full Name</label><input type="text" id="teacher-cam-name" class="form-control" placeholder="e.g., John Smith" required></div>
+                                <div class="form-group"><label for="teacher-cam-subject">Subject</label><input type="text" id="teacher-cam-subject" class="form-control" placeholder="e.g., Mathematics" required></div>
+                                <div class="form-group"><label for="teacher-cam-class">Class</label><input type="text" id="teacher-cam-class" class="form-control" placeholder="e.g., 10B" required></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Capture Photo</label>
+                            <div id="teacher-camera-view" class="camera-view" style="height: 240px; margin-bottom: 1rem;">
+                                <span>Camera is Off</span>
+                            </div>
+                            <div style="display: flex; gap: 1rem;">
+                                <button id="teacher-camera-btn" class="btn btn-primary" style="flex: 1;" onclick="toggleTeacherCamera()">Start Camera</button>
+                                <button id="teacher-capture-btn" class="btn btn-success" style="flex: 1;" onclick="captureTeacherPhoto()" disabled>Capture Photo</button>
+                            </div>
+                            <div id="teacher-camera-result" style="margin-top: 1rem;"></div>
+                        </div>
+                        <div class="form-group" style="margin-top: 1.5rem;">
+                            <button type="button" class="btn btn-success" onclick="registerTeacherFromCamera()">Register Teacher</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card"><h3>All Teachers</h3><div id="teachers-table-container"><p class="empty-state">No teachers have been added yet.</p></div></div>
+            </div>
+
+            <!-- VISITORS PAGE -->
+            <div id="visitors-page" class="page">
+                <div class="page-header">
+                    <h1>Visitor Management</h1>
+                    <button class="btn btn-primary" onclick="toggleAddVisitorForm()"><svg class="icon" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg> Register New Visitor</button>
+                </div>
+                <div id="add-visitor-form-container" class="card" style="display: none; margin-bottom: 1.5rem;">
+                    <h3>Register New Visitor</h3>
+                    <div class="tabs">
+                        <div class="tab active" onclick="switchTab('visitor-tab', 'visitor-manual-entry')">Manual Entry</div>
+                        <div class="tab" onclick="switchTab('visitor-tab', 'visitor-camera-entry')">Camera Entry</div>
+                    </div>
+                    <div id="visitor-manual-entry" class="tab-content active">
+                        <form onsubmit="addNewVisitor(event)">
+                            <div class="grid grid-cols-2">
+                                <div class="form-group"><label for="visitor-name">Full Name</label><input type="text" id="visitor-name" class="form-control" placeholder="e.g., John Doe" required></div>
+                                <div class="form-group"><label for="visitor-purpose">Purpose of Visit</label><input type="text" id="visitor-purpose" class="form-control" placeholder="e.g., Meeting with Principal" required></div>
+                                <div class="form-group"><label for="visitor-phone">Phone Number</label><input type="tel" id="visitor-phone" class="form-control" placeholder="e.g., 123-456-7890"></div>
+                                <div class="form-group"><label for="visitor-date">Visit Date</label><input type="date" id="visitor-date" class="form-control" required></div>
+                            </div>
+                            <div class="form-group">
+                                <label>Photo for Identification (Optional)</label>
+                                <div class="image-upload-container">
+                                    <div id="visitor-image-preview" class="image-preview-placeholder"><svg class="icon" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></div>
+                                    <div>
+                                        <input type="file" id="visitor-image" class="form-control" accept="image/*" onchange="previewImage(event, 'visitor')">
+                                        <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem;">Upload a clear, front-facing photo.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-success">Register Visitor</button>
+                        </form>
+                    </div>
+                    <div id="visitor-camera-entry" class="tab-content">
+                        <div class="form-group">
+                            <label>Registration Details</label>
+                            <div class="grid grid-cols-2">
+                                <div class="form-group"><label for="visitor-cam-name">Full Name</label><input type="text" id="visitor-cam-name" class="form-control" placeholder="e.g., John Doe" required></div>
+                                <div class="form-group"><label for="visitor-cam-purpose">Purpose of Visit</label><input type="text" id="visitor-cam-purpose" class="form-control" placeholder="e.g., Meeting with Principal" required></div>
+                                <div class="form-group"><label for="visitor-cam-phone">Phone Number</label><input type="tel" id="visitor-cam-phone" class="form-control" placeholder="e.g., 123-456-7890"></div>
+                                <div class="form-group"><label for="visitor-cam-date">Visit Date</label><input type="date" id="visitor-cam-date" class="form-control" required></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Capture Photo</label>
+                            <div id="visitor-camera-view" class="camera-view" style="height: 240px; margin-bottom: 1rem;">
+                                <span>Camera is Off</span>
+                            </div>
+                            <div style="display: flex; gap: 1rem;">
+                                <button id="visitor-camera-btn" class="btn btn-primary" style="flex: 1;" onclick="toggleVisitorCamera()">Start Camera</button>
+                                <button id="visitor-capture-btn" class="btn btn-success" style="flex: 1;" onclick="captureVisitorPhoto()" disabled>Capture Photo</button>
+                            </div>
+                            <div id="visitor-camera-result" style="margin-top: 1rem;"></div>
+                        </div>
+                        <div class="form-group" style="margin-top: 1.5rem;">
+                            <button type="button" class="btn btn-success" onclick="registerVisitorFromCamera()">Register Visitor</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3>Visitor Check-In/Out</h3>
+                    <div class="grid grid-cols-2" style="margin-top: 1.5rem;">
+                        <div class="card">
+                            <h4>Check-In</h4>
+                            <form onsubmit="checkInVisitor(event)">
+                                <div class="form-group"><label for="checkin-name">Visitor Name</label><input type="text" id="checkin-name" class="form-control" placeholder="Enter visitor name" required></div>
+                                <button type="submit" class="btn btn-success">Check In</button>
+                            </form>
+                            <div id="checkin-result"></div>
+                        </div>
+                        <div class="card">
+                            <h4>Check-Out</h4>
+                            <form onsubmit="checkOutVisitor(event)">
+                                <div class="form-group"><label for="checkout-name">Visitor Name</label><input type="text" id="checkout-name" class="form-control" placeholder="Enter visitor name" required></div>
+                                <button type="submit" class="btn btn-danger">Check Out</button>
+                            </form>
+                            <div id="checkout-result"></div>
+                        </div>
+                    </div>
+                    <div class="card" style="margin-top: 1.5rem;">
+                        <h4>Face Recognition Check-In</h4>
+                        <div id="visitor-recognition-view" class="camera-view" style="height: 240px; margin-bottom: 1rem;">
+                            <span>Camera is Off</span>
+                        </div>
+                        <button id="visitor-recognition-btn" class="btn btn-primary" style="width: 100%;" onclick="toggleVisitorRecognition()">Start Face Recognition</button>
+                        <div id="visitor-recognition-result" style="margin-top: 1rem;"></div>
+                    </div>
+                </div>
+                <div class="card" style="margin-top: 1.5rem;"><h3>All Visitors</h3><div id="visitors-table-container"><p class="empty-state">No visitors have been registered yet.</p></div></div>
+            </div>
+
+            <!-- ATTENDANCE PAGE -->
+            <div id="attendance-page" class="page">
+                <div class="page-header"><h1>Mark Attendance</h1></div>
+                <div class="card">
+                    <h3>Mark for</h3>
+                    <div style="display: flex; gap: 1.5rem; margin-top: 1rem;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;"><input type="radio" name="attendance-type" value="prefect" checked onchange="setAttendanceType('prefect')"> Prefects</label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;"><input type="radio" name="attendance-type" value="teacher" onchange="setAttendanceType('teacher')"> Teachers</label>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2" style="margin-top: 1.5rem;">
+                    <div class="card">
+                        <h3>Mark by ID</h3>
+                        <form onsubmit="markAttendanceById(event)">
+                            <div class="form-group"><label for="attendance-id">Enter ID</label><input type="text" id="attendance-id" class="form-control" placeholder="e.g., P001 or T001" required></div>
+                            <button type="submit" class="btn btn-success">Mark Attendance</button>
+                        </form>
+                        <div id="id-mark-result"></div>
+                    </div>
+                    <div class="card">
+                        <h3>Mark by Camera Scan</h3>
+                        <div id="camera-view" class="camera-view"><span>Camera is Off</span></div>
+                        <button id="camera-btn" class="btn btn-primary" style="width: 100%; margin-top: 1rem;" onclick="toggleCamera()">Start Camera</button>
+                        <div id="camera-scan-result"></div>
+                    </div>
+                </div>
+                <div class="card" style="margin-top: 1.5rem;">
+                    <h3>Download Attendance Report</h3>
+                    <form onsubmit="downloadAttendanceReport(event)">
+                        <div class="form-group"><label for="attendance-date">Select Date</label><input type="date" id="attendance-date" class="form-control" required></div>
+                        <div style="display: flex; gap: 1rem;">
+                            <button type="submit" class="btn btn-primary"><svg class="icon" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg> Download CSV</button>
+                            <button type="button" class="btn btn-secondary" onclick="downloadAttendancePDF()"><svg class="icon" viewBox="0 0 24 24"><path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20M12,11L8,15H10.5V19H13.5V15H16L12,11Z"/></svg> Download PDF</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- LOGBOOK PAGE -->
+            <div id="logbook-page" class="page">
+                <div class="page-header"><h1>Digital Logbook (LG Book)</h1></div>
+                <div class="card">
+                    <h3>Add New Entry</h3>
+                    <form onsubmit="addLogbookEntry(event)">
+                        <div class="grid grid-cols-2">
+                            <div class="form-group"><label for="log-title">Entry Title</label><input type="text" id="log-title" class="form-control" required></div>
+                            <div class="form-group"><label for="log-date">Date</label><input type="date" id="log-date" class="form-control" required></div>
+                        </div>
+                        <div class="form-group"><label for="log-details">Details</label><textarea id="log-details" class="form-control" rows="4" required></textarea></div>
+                        <button type="submit" class="btn btn-primary">Add Entry</button>
+                    </form>
+                </div>
+                <div class="card" style="margin-top: 1.5rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <h3>Previous Entries</h3>
+                        <button class="btn btn-outline btn-sm" onclick="document.getElementById('download-logbook-form').style.display='block';">Download Range</button>
+                    </div>
+                    <form id="download-logbook-form" onsubmit="downloadLogbookReport(event)" style="display:none; margin-top: 1rem; padding: 1rem; background: var(--background-color); border-radius: 0.5rem;">
+                        <div class="grid grid-cols-2">
+                            <div class="form-group"><label for="log-start-date">Start Date</label><input type="date" id="log-start-date" class="form-control" required></div>
+                            <div class="form-group"><label for="log-end-date">End Date</label><input type="date" id="log-end-date" class="form-control" required></div>
+                        </div>
+                        <div style="display: flex; gap: 1rem;">
+                            <button type="submit" class="btn btn-primary btn-sm">Download CSV</button>
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="downloadLogbookPDF()">Download PDF</button>
+                        </div>
+                    </form>
+                    <div id="logbook-tbody-container"><p class="empty-state">No logbook entries have been added yet.</p></div>
+                </div>
+            </div>
+
+            <!-- ANNOUNCEMENTS PAGE -->
+            <div id="announcements-page" class="page">
+                <div class="page-header"><h1>Announcements & Duties</h1></div>
+                <div class="card">
+                    <h3>Post New Announcement</h3>
+                    <form onsubmit="addAnnouncement(event)">
+                        <div class="form-group"><label for="announcement-title">Title</label><input type="text" id="announcement-title" class="form-control" required></div>
+                        <div class="form-group"><label for="announcement-message">Message</label><textarea id="announcement-message" class="form-control" rows="3" required></textarea></div>
+                        <button type="submit" class="btn btn-primary">Post Announcement</button>
+                    </form>
+                </div>
+                <div id="announcements-list" style="margin-top: 1.5rem;"><p class="empty-state">No announcements have been posted yet.</p></div>
+            </div>
+
+            <!-- SETTINGS PAGE -->
+            <div id="settings-page" class="page">
+                <div class="page-header"><h1>Settings & Data Management</h1></div>
+                <div class="card">
+                    <h3>Face Recognition Settings</h3>
+                    <div style="margin-top: 1rem;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="checkbox" id="face-recognition-enabled" checked onchange="toggleFaceRecognition()">
+                            <span>Enable Face Recognition Features</span>
+                        </label>
+                        <p style="font-size: 0.875rem; color: var(--text-muted); margin-top: 0.5rem;">When disabled, all face recognition features will be turned off and only ID-based identification will be available.</p>
+                    </div>
+                    <div style="margin-top: 1.5rem;">
+                        <label for="recognition-threshold">Recognition Threshold</label>
+                        <input type="range" id="recognition-threshold" min="0.1" max="1" step="0.1" value="0.6" class="form-control" onchange="updateThreshold(this.value)">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.875rem; color: var(--text-muted);">
+                            <span>More Strict</span>
+                            <span id="threshold-value">0.6</span>
+                            <span>More Lenient</span>
+                        </div>
+                        <p style="font-size: 0.875rem; color: var(--text-muted); margin-top: 0.5rem;">Higher values require more exact matches. Lower values may result in false positives.</p>
+                    </div>
+                </div>
+                <div class="card" style="margin-top: 1.5rem;">
+                    <h3>Storage Information</h3>
+                    <p style="margin-top: 1rem;">Your data is stored locally in this browser. It is permanent for this browser on this device. For true permanence, please use the export/import feature below to back up and restore your data.</p>
+                    <div style="margin-top: 2rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+                        <button class="btn btn-outline" onclick="exportAllData()"><svg class="icon" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg> Export All Data</button>
+                        <label for="import-data" class="btn btn-outline" style="cursor: pointer;"><svg class="icon" viewBox="0 0 24 24"><path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/></svg> Import Data</label>
+                        <input type="file" id="import-data" accept=".json" style="display: none;" onchange="importAllData(event)">
+                        <button class="btn btn-danger" onclick="confirmClearAllData()"><svg class="icon" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg> Clear All Data</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal for updating photo -->
+    <div id="photo-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="photo-modal-title">Update Photo</h2>
+                <button class="modal-close" onclick="closePhotoModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="modal-photo-input">Select New Photo</label>
+                    <input type="file" id="modal-photo-input" class="form-control" accept="image/*" onchange="previewModalImage(event)">
+                </div>
+                <div class="image-upload-container" style="justify-content: center; margin-top: 1rem;">
+                    <div id="modal-photo-preview" class="image-preview-placeholder"><svg class="icon" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></div>
+                </div>
+                <div style="display: flex; gap: 1rem; margin-top: 1.5rem; justify-content: flex-end;">
+                    <button class="btn btn-outline" onclick="closePhotoModal()">Cancel</button>
+                    <button class="btn btn-primary" onclick="saveUpdatedPhoto()">Save Photo</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- GLOBAL STATE & CONFIG ---
+        const STORAGE_KEYS = { PREFECTS: 'prefects', TEACHERS: 'teachers', VISITORS: 'visitors', LOGBOOK: 'logbook', ANNOUNCEMENTS: 'announcements', ATTENDANCE: 'attendance' };
+        const MODEL_URL = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights';
+        let appState = { prefects: [], teachers: [], visitors: [], logbookEntries: [], announcements: [], attendanceRecords: [] };
+        let currentAttendanceType = 'prefect';
+        let isVideoRunning = false;
+        let loginVideoRunning = false;
+        let prefectVideoRunning = false;
+        let teacherVideoRunning = false;
+        let visitorVideoRunning = false;
+        let visitorRecognitionRunning = false;
+        let videoStream = null;
+        let loginVideoStream = null;
+        let prefectVideoStream = null;
+        let teacherVideoStream = null;
+        let visitorVideoStream = null;
+        let visitorRecognitionStream = null;
+        let faceDescriptors = { prefect: [], teacher: [], visitor: [] };
+        let modelsLoaded = false;
+        let loadingTimeout;
+        let currentPhotoUpdate = { type: null, id: null };
+        let capturedPrefectImage = null;
+        let capturedTeacherImage = null;
+        let capturedVisitorImage = null;
+        let RECOGNITION_THRESHOLD = 0.6;
+        let faceRecognitionEnabled = true;
+
+        // --- INITIALIZATION & FACE API ---
+        window.addEventListener('load', async () => {
+            // Set a timeout to show the skip button after 10 seconds
+            loadingTimeout = setTimeout(() => {
+                document.getElementById('skip-loading').style.display = 'block';
+                document.getElementById('loading-text').textContent = 'Loading is taking longer than expected. You can skip face recognition setup or continue waiting.';
+            }, 10000);
+            
+            // Start loading models
+            await loadModels();
+        });
+
+        async function loadModels() {
+            const overlay = document.getElementById('loading-overlay');
+            const loadingText = document.getElementById('loading-text');
+            const progressBar = document.getElementById('progress-bar');
+            
+            try {
+                // Update progress
+                loadingText.textContent = 'Loading AI Models (0%)...';
+                progressBar.style.width = '10%';
+                
+                // Load models with progress updates
+                await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+                progressBar.style.width = '40%';
+                loadingText.textContent = 'Loading AI Models (40%)...';
+                
+                await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+                progressBar.style.width = '70%';
+                loadingText.textContent = 'Loading AI Models (70%)...';
+                
+                await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+                progressBar.style.width = '100%';
+                loadingText.textContent = 'Loading AI Models (100%)...';
+                
+                // Small delay to show 100% completion
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                modelsLoaded = true;
+                clearTimeout(loadingTimeout);
+                overlay.classList.add('hidden');
+                console.log('Models loaded successfully');
+                
+                // Initialize the app after models are loaded
+                initializeApp();
+            } catch (e) {
+                console.error('Failed to load models', e);
+                clearTimeout(loadingTimeout);
+                loadingText.textContent = 'Failed to load AI models. Face recognition features will be disabled.';
+                document.getElementById('skip-loading').style.display = 'block';
+                document.getElementById('skip-loading').textContent = 'Continue Without Face Recognition';
+                
+                // Initialize app even if models failed
+                setTimeout(() => {
+                    overlay.classList.add('hidden');
+                    initializeApp();
+                }, 2000);
+            }
+        }
+
+        function skipModelLoading() {
+            clearTimeout(loadingTimeout);
+            document.getElementById('loading-overlay').classList.add('hidden');
+            modelsLoaded = false;
+            console.log('Skipping model loading - face recognition will be disabled');
+            initializeApp();
+        }
+
+        function initializeFaceDescriptors() {
+            faceDescriptors.prefect = appState.prefects.filter(p => p.descriptor).map(p => ({ id: p.id, name: p.name, descriptor: new Float32Array(p.descriptor) }));
+            faceDescriptors.teacher = appState.teachers.filter(t => t.descriptor).map(t => ({ id: t.id, name: t.name, descriptor: new Float32Array(t.descriptor) }));
+            faceDescriptors.visitor = appState.visitors.filter(v => v.descriptor).map(v => ({ id: v.id, name: v.name, descriptor: new Float32Array(v.descriptor) }));
+        }
+
+        // --- LOCAL STORAGE ---
+        function saveData() { 
+            Object.keys(STORAGE_KEYS).forEach(key => {
+                try {
+                    localStorage.setItem(STORAGE_KEYS[key], JSON.stringify(appState[key.toLowerCase()]));
+                } catch (e) {
+                    console.error(`Error saving ${key}:`, e);
+                }
+            });
+        }
+        
+        function loadData() {
+            Object.keys(STORAGE_KEYS).forEach(key => {
+                try {
+                    const data = localStorage.getItem(STORAGE_KEYS[key]);
+                    if (data) appState[key.toLowerCase()] = JSON.parse(data);
+                } catch (e) {
+                    console.error(`Error loading ${key}:`, e);
+                }
+            });
+            initializeFaceDescriptors();
+        }
+        
+        function clearAllData() { 
+            Object.keys(STORAGE_KEYS).forEach(key => {
+                try {
+                    localStorage.removeItem(STORAGE_KEYS[key]);
+                } catch (e) {
+                    console.error(`Error clearing ${key}:`, e);
+                }
+            });
+        }
+
+        // --- TABS ---
+        function switchTab(tabGroup, tabId) {
+            // Hide all tabs in the group
+            document.querySelectorAll(`[id^="${tabGroup}"]`).forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show the selected tab
+            document.getElementById(tabId).classList.add('active');
+        }
+
+        // --- AUTHENTICATION ---
+        function handleLogin(e) {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            if (username === 'admin' && password === 'password') {
+                document.getElementById('user-name').textContent = username;
+                document.getElementById('login-page').style.display = 'none';
+                document.getElementById('app').style.display = 'flex';
+                initializeApp();
+            } else { 
+                alert('Invalid credentials.'); 
+            }
+        }
+        
+        function handleLogout() {
+            document.getElementById('app').style.display = 'none';
+            document.getElementById('login-page').style.display = 'flex';
+            document.getElementById('login-form').reset();
+            stopAllCameras();
+        }
+
+        // --- FACE RECOGNITION LOGIN ---
+        async function toggleLoginCamera() {
+            if (!modelsLoaded || !faceRecognitionEnabled) {
+                document.getElementById('login-camera-result').innerHTML = `<div class="scan-result error">Face recognition is not available. Please use password login.</div>`;
+                return;
+            }
+            
+            const btn = document.getElementById('login-camera-btn');
+            const view = document.getElementById('login-camera-view');
+            
+            if (!loginVideoRunning) {
+                try {
+                    loginVideoStream = await navigator.mediaDevices.getUserMedia({ video: {} });
+                    view.innerHTML = `<video id="login-video" autoplay muted></video>`;
+                    document.getElementById('login-video').srcObject = loginVideoStream;
+                    loginVideoRunning = true;
+                    btn.textContent = 'Identify';
+                    btn.classList.remove('btn-primary');
+                    btn.classList.add('btn-success');
+                } catch (err) {
+                    console.error("Error accessing camera: ", err);
+                    view.innerHTML = `<span>Camera Access Denied</span>`;
+                }
+            } else {
+                identifyLoginFace();
+            }
+        }
+
+        async function identifyLoginFace() {
+            if (!modelsLoaded || !faceRecognitionEnabled) {
+                document.getElementById('login-camera-result').innerHTML = `<div class="scan-result error">AI models not loaded or face recognition disabled. Please wait and try again.</div>`;
+                return;
+            }
+            
+            const view = document.getElementById('login-camera-view');
+            const resultDiv = document.getElementById('login-camera-result');
+            const btn = document.getElementById('login-camera-btn');
+            view.classList.add('scanning');
+            btn.disabled = true;
+            resultDiv.innerHTML = '';
+
+            try {
+                const video = document.getElementById('login-video');
+                const detections = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptors();
+
+                if (detections.length > 0) {
+                    const descriptor = detections[0].descriptor;
+                    
+                    // Check against all known faces (prefects and teachers)
+                    const allDescriptors = [
+                        ...faceDescriptors.prefect.map(d => ({ ...d, type: 'prefect' })),
+                        ...faceDescriptors.teacher.map(d => ({ ...d, type: 'teacher' }))
+                    ];
+                    
+                    if (allDescriptors.length === 0) {
+                        resultDiv.innerHTML = `<div class="scan-result error">No registered faces found. Please register users first.</div>`;
+                    } else {
+                        const matchedPerson = faceapi.findBestMatch(descriptor, allDescriptors.map(d => d.descriptor));
+                        
+                        if (matchedPerson.distance < RECOGNITION_THRESHOLD) {
+                            const person = allDescriptors.find(d => d.descriptor === matchedPerson.descriptor);
+                            resultDiv.innerHTML = `<div class="scan-result success">Welcome, ${person.name}! Logging in...</div>`;
+                            
+                            // Simulate login process
+                            setTimeout(() => {
+                                document.getElementById('user-name').textContent = person.name;
+                                document.getElementById('login-page').style.display = 'none';
+                                document.getElementById('app').style.display = 'flex';
+                                stopLoginCamera();
+                                initializeApp();
+                            }, 1500);
+                        } else {
+                            resultDiv.innerHTML = `<div class="scan-result error">Face not recognized. Please try again.</div>`;
+                        }
+                    }
+                } else {
+                    resultDiv.innerHTML = `<div class="scan-result error">No face detected. Please try again.</div>`;
+                }
+            } catch (e) {
+                console.error('Error during face recognition:', e);
+                resultDiv.innerHTML = `<div class="scan-result error">Error during face recognition. Please try again.</div>`;
+            }
+
+            view.classList.remove('scanning');
+            btn.disabled = false;
+        }
+
+        function stopLoginCamera() {
+            if (loginVideoStream) {
+                loginVideoStream.getTracks().forEach(track => track.stop());
+                loginVideoRunning = false;
+                document.getElementById('login-camera-view').innerHTML = '<span>Camera is Off</span>';
+                const btn = document.getElementById('login-camera-btn');
+                btn.textContent = 'Start Camera';
+                btn.classList.remove('btn-success');
+                btn.classList.add('btn-primary');
+            }
+        }
+
+        // --- NAVIGATION ---
+        function showPage(pageId, pageTitle) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+            event.target.closest('.nav-link').classList.add('active');
+            document.getElementById('page-title').textContent = pageTitle;
+        }
+
+        // --- APP INITIALIZATION ---
+        function initializeApp() {
+            loadData();
+            updateDashboardStats();
+            renderPrefectsTable();
+            renderTeachersTable();
+            renderVisitorsTable();
+            renderLogbook();
+            renderAnnouncements();
+            renderRecentActivity();
+            
+            // Set today's date as default for date inputs
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('attendance-date').value = today;
+            document.getElementById('log-date').value = today;
+            document.getElementById('visitor-date').value = today;
+            document.getElementById('visitor-cam-date').value = today;
+            
+            // Load settings
+            const faceRecognitionEnabledSetting = localStorage.getItem('faceRecognitionEnabled');
+            if (faceRecognitionEnabledSetting !== null) {
+                faceRecognitionEnabled = faceRecognitionEnabledSetting === 'true';
+                document.getElementById('face-recognition-enabled').checked = faceRecognitionEnabled;
+            }
+            
+            const threshold = localStorage.getItem('recognitionThreshold');
+            if (threshold !== null) {
+                RECOGNITION_THRESHOLD = parseFloat(threshold);
+                document.getElementById('recognition-threshold').value = RECOGNITION_THRESHOLD;
+                document.getElementById('threshold-value').textContent = RECOGNITION_THRESHOLD;
+            }
+        }
+
+        // --- DASHBOARD ---
+        function updateDashboardStats() {
+            const today = new Date().toISOString().split('T')[0];
+            const todayRecords = appState.attendanceRecords.filter(r => r.date === today);
+            document.getElementById('total-prefects').textContent = appState.prefects.length;
+            document.getElementById('total-teachers').textContent = appState.teachers.length;
+            document.getElementById('total-visitors').textContent = appState.visitors.length;
+            document.getElementById('present-today').textContent = todayRecords.length;
+        }
+        
+        function renderRecentActivity() {
+            const container = document.getElementById('recent-activity-list');
+            const allActivity = [
+                ...appState.logbookEntries.map(e => ({ type: 'Logbook', text: `New entry: "${e.title}"`, date: e.date })),
+                ...appState.announcements.map(a => ({ type: 'Announcement', text: `Posted: "${a.title}"`, date: a.date })),
+                ...appState.visitors.filter(v => v.checkInTime).map(v => ({ type: 'Visitor', text: `${v.name} checked in`, date: v.date })),
+            ].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
+            container.innerHTML = allActivity.length ? allActivity.map(act => `<p><strong>${act.type}:</strong> ${act.text} <span style="color: var(--text-muted); font-size: 0.8em;">(${act.date})</span></p>`).join('') : '<p class="empty-state">No recent activity to display.</p>';
+        }
+
+        // --- PERSON MANAGEMENT (PREFECTS & TEACHERS) ---
+        function toggleAddPrefectForm() { 
+            const form = document.getElementById('add-prefect-form-container');
+            form.style.display = form.style.display === 'none' ? 'block' : 'none';
+        }
+        
+        function toggleAddTeacherForm() { 
+            const form = document.getElementById('add-teacher-form-container');
+            form.style.display = form.style.display === 'none' ? 'block' : 'none';
+        }
+
+        async function addNewPerson(event, type) {
+            event.preventDefault();
+            const idInput = document.getElementById(`new-${type}-id`);
+            const nameInput = document.getElementById(`new-${type}-name`);
+            const imageInput = document.getElementById(`new-${type}-image`);
+            const imagePreview = document.getElementById(`${type}-image-preview`);
+
+            const newPerson = {
+                id: idInput.value.toUpperCase(),
+                name: nameInput.value,
+                imageBase64: imagePreview.dataset.base64 || '',
+            };
+            if (type === 'prefect') {
+                newPerson.position = document.getElementById('new-prefect-position').value;
+                newPerson.class = document.getElementById('new-prefect-class').value;
+            } else {
+                newPerson.subject = document.getElementById('new-teacher-subject').value;
+                newPerson.class = document.getElementById('new-teacher-class').value;
+            }
+
+            if (appState[type + 's'].some(p => p.id === newPerson.id)) { 
+                alert('A person with this ID already exists.'); 
+                return; 
+            }
+
+            // Generate face descriptor if models are loaded and image is provided
+            if (modelsLoaded && faceRecognitionEnabled && newPerson.imageBase64) {
+                try {
+                    const img = await faceapi.fetchImage(newPerson.imageBase64);
+                    const detections = await faceapi.detectAllFaces(img, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptors();
+                    
+                    if (detections.length === 0) { 
+                        alert('No face detected in the photo. Please upload a clear photo.'); 
+                        return; 
+                    }
+                    if (detections.length > 1) { 
+                        alert('Multiple faces detected. Please upload a photo with only one person.'); 
+                        return; 
+                    }
+                    
+                    newPerson.descriptor = Array.from(detections[0].descriptor);
+                } catch (e) {
+                    console.error('Error processing face:', e);
+                    alert('Error processing face. Please try again with a different photo.');
+                    return;
+                }
+            } else if (!newPerson.imageBase64) {
+                // If no image provided, just save without face recognition
+                if (!confirm('No photo provided. This person can only be identified by ID. Continue?')) {
+                    return;
+                }
+            } else {
+                // If models aren't loaded, add the person without face recognition
+                if (!confirm('Face recognition is not available. This person can only be identified by ID. Continue?')) {
+                    return;
+                }
+            }
+
+            appState[type + 's'].push(newPerson);
+            saveData();
+            initializeFaceDescriptors();
+            renderPrefectsTable();
+            renderTeachersTable();
+            updateDashboardStats();
+            event.target.reset();
+            imagePreview.innerHTML = `<svg class="icon" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>`;
+            delete imagePreview.dataset.base64;
+            document.getElementById(`add-${type}-form-container`).style.display = 'none';
+        }
+
+        function previewImage(event, type) {
+            const file = event.target.files[0];
+            const preview = document.getElementById(`${type}-image-preview`);
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    preview.innerHTML = `<img src="${e.target.result}" class="image-preview">`;
+                    preview.dataset.base64 = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function renderPrefectsTable() {
+            const container = document.getElementById('prefects-table-container');
+            if (appState.prefects.length === 0) { 
+                container.innerHTML = '<p class="empty-state">No prefects have been added yet.</p>'; 
+                return; 
+            }
+            let html = `<div class="table-container"><table class="data-table"><thead><tr><th>Photo</th><th>ID</th><th>Name</th><th>Position</th><th>Class</th><th>Actions</th></tr></thead><tbody>`;
+            appState.prefects.forEach(p => {
+                const photoSrc = p.imageBase64 || 'https://i.pravatar.cc/40';
+                html += `<tr>
+                    <td><img src="${photoSrc}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;"></td>
+                    <td>${p.id}</td>
+                    <td>${p.name}</td>
+                    <td>${p.position}</td>
+                    <td>${p.class}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline" onclick="openPhotoModal('prefect', '${p.id}')">Update Photo</button>
+                        <button class="btn btn-sm btn-danger" onclick="deletePerson('prefect', '${p.id}')">Delete</button>
+                    </td>
+                </tr>`;
+            });
+            html += `</tbody></table></div>`; 
+            container.innerHTML = html;
+        }
+        
+        function renderTeachersTable() {
+            const container = document.getElementById('teachers-table-container');
+            if (appState.teachers.length === 0) { 
+                container.innerHTML = '<p class="empty-state">No teachers have been added yet.</p>'; 
+                return; 
+            }
+            let html = `<div class="table-container"><table class="data-table"><thead><tr><th>Photo</th><th>ID</th><th>Name</th><th>Subject</th><th>Class</th><th>Actions</th></tr></thead><tbody>`;
+            appState.teachers.forEach(t => {
+                const photoSrc = t.imageBase64 || 'https://i.pravatar.cc/40';
+                html += `<tr>
+                    <td><img src="${photoSrc}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;"></td>
+                    <td>${t.id}</td>
+                    <td>${t.name}</td>
+                    <td>${t.subject}</td>
+                    <td>${t.class}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline" onclick="openPhotoModal('teacher', '${t.id}')">Update Photo</button>
+                        <button class="btn btn-sm btn-danger" onclick="deletePerson('teacher', '${t.id}')">Delete</button>
+                    </td>
+                </tr>`;
+            });
+            html += `</tbody></table></div>`; 
+            container.innerHTML = html;
+        }
+
+        function deletePerson(type, id) {
+            if (confirm(`Are you sure you want to delete this ${type}? This action cannot be undone.`)) {
+                appState[type + 's'] = appState[type + 's'].filter(p => p.id !== id);
+                saveData();
+                initializeFaceDescriptors();
+                renderPrefectsTable();
+                renderTeachersTable();
+                updateDashboardStats();
+            }
+        }
+
+        function openPhotoModal(type, id) {
+            currentPhotoUpdate = { type, id };
+            const person = appState[type + 's'].find(p => p.id === id);
+            document.getElementById('photo-modal-title').textContent = `Update Photo for ${person.name}`;
+            
+            // Show current photo if available
+            const preview = document.getElementById('modal-photo-preview');
+            if (person.imageBase64) {
+                preview.innerHTML = `<img src="${person.imageBase64}" class="image-preview">`;
+                preview.dataset.base64 = person.imageBase64;
+            } else {
+                preview.innerHTML = `<svg class="icon" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>`;
+                delete preview.dataset.base64;
+            }
+            
+            document.getElementById('photo-modal').classList.add('active');
+        }
+
+        function closePhotoModal() {
+            document.getElementById('photo-modal').classList.remove('active');
+            document.getElementById('modal-photo-input').value = '';
+        }
+
+        function previewModalImage(event) {
+            const file = event.target.files[0];
+            const preview = document.getElementById('modal-photo-preview');
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    preview.innerHTML = `<img src="${e.target.result}" class="image-preview">`;
+                    preview.dataset.base64 = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        async function saveUpdatedPhoto() {
+            const preview = document.getElementById('modal-photo-preview');
+            const newImageBase64 = preview.dataset.base64;
+            
+            if (!newImageBase64) {
+                alert('Please select a photo to upload.');
+                return;
+            }
+            
+            const { type, id } = currentPhotoUpdate;
+            const personIndex = appState[type + 's'].findIndex(p => p.id === id);
+            
+            if (personIndex === -1) {
+                alert('Person not found.');
+                return;
+            }
+            
+            // Generate face descriptor if models are loaded
+            if (modelsLoaded && faceRecognitionEnabled) {
+                try {
+                    const img = await faceapi.fetchImage(newImageBase64);
+                    const detections = await faceapi.detectAllFaces(img, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptors();
+                    
+                    if (detections.length === 0) { 
+                        alert('No face detected in the photo. Please upload a clear photo.'); 
+                        return; 
+                    }
+                    if (detections.length > 1) { 
+                        alert('Multiple faces detected. Please upload a photo with only one person.'); 
+                        return; 
+                    }
+                    
+                    appState[type + 's'][personIndex].descriptor = Array.from(detections[0].descriptor);
+                } catch (e) {
+                    console.error('Error processing face:', e);
+                    alert('Error processing face. Please try again with a different photo.');
+                    return;
+                }
+            }
+            
+            // Update the photo
+            appState[type + 's'][personIndex].imageBase64 = newImageBase64;
+            saveData();
+            initializeFaceDescriptors();
+            renderPrefectsTable();
+            renderTeachersTable();
+            closePhotoModal();
+        }
+
+        // --- CAMERA REGISTRATION ---
+        async function togglePrefectCamera() {
+            if (!modelsLoaded || !faceRecognitionEnabled) {
+                document.getElementById('prefect-camera-result').innerHTML = `<div class="scan-result error">Face recognition is not available. Please use manual entry.</div>`;
+                return;
+            }
+            
+            const btn = document.getElementById('prefect-camera-btn');
+            const view = document.getElementById('prefect-camera-view');
+            
+            if (!prefectVideoRunning) {
+                try {
+                    prefectVideoStream = await navigator.mediaDevices.getUserMedia({ video: {} });
+                    view.innerHTML = `<video id="prefect-video" autoplay muted></video>`;
+                    document.getElementById('prefect-video').srcObject = prefectVideoStream;
+                    prefectVideoRunning = true;
+                    btn.textContent = 'Stop Camera';
+                    btn.classList.remove('btn-primary');
+                    btn.classList.add('btn-danger');
+                    document.getElementById('prefect-capture-btn').disabled = false;
+                } catch (err) {
+                    console.error("Error accessing camera: ", err);
+                    view.innerHTML = `<span>Camera Access Denied</span>`;
+                }
+            } else {
+                stopPrefectCamera();
+            }
+        }
+
+        function stopPrefectCamera() {
+            if (prefectVideoStream) {
+                prefectVideoStream.getTracks().forEach(track => track.stop());
+                prefectVideoRunning = false;
+                document.getElementById('prefect-camera-view').innerHTML = '<span>Camera is Off</span>';
+                const btn = document.getElementById('prefect-camera-btn');
+                btn.textContent = 'Start Camera';
+                btn.classList.remove('btn-danger');
+                btn.classList.add('btn-primary');
+                document.getElementById('prefect-capture-btn').disabled = true;
+            }
+        }
+
+        function capturePrefectPhoto() {
+            const video = document.getElementById('prefect-video');
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0);
+            capturedPrefectImage = canvas.toDataURL('image/jpeg');
+            
+            // Show preview
+            document.getElementById('prefect-camera-result').innerHTML = `
+                <div class="scan-result success">Photo captured successfully!</div>
+                <img src="${capturedPrefectImage}" style="width: 100px; height: 100px; border-radius: 50%; margin-top: 1rem;">
+            `;
+        }
+
+        async function registerPrefectFromCamera() {
+            if (!capturedPrefectImage) {
+                alert('Please capture a photo first.');
+                return;
+            }
+            
+            const id = document.getElementById('prefect-cam-id').value.toUpperCase();
+            const name = document.getElementById('prefect-cam-name').value;
+            const position = document.getElementById('prefect-cam-position').value;
+            const className = document.getElementById('prefect-cam-class').value;
+            
+            if (!id || !name || !position || !className) {
+                alert('Please fill in all fields.');
+                return;
+            }
+            
+            if (appState.prefects.some(p => p.id === id)) {
+                alert('A prefect with this ID already exists.');
+                return;
+            }
+            
+            const newPrefect = {
+                id,
+                name,
+                position,
+                class: className,
+                imageBase64: capturedPrefectImage
+            };
+            
+            // Generate face descriptor if models are loaded
+            if (modelsLoaded && faceRecognitionEnabled) {
+                try {
+                    const img = await faceapi.fetchImage(capturedPrefectImage);
+                    const detections = await faceapi.detectAllFaces(img, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptors();
+                    
+                    if (detections.length === 0) {
+                        alert('No face detected in the photo. Please try again.');
+                        return;
+                    }
+                    if (detections.length > 1) {
+                        alert('Multiple faces detected. Please try again with only one person in frame.');
+                        return;
+                    }
+                    
+                    newPrefect.descriptor = Array.from(detections[0].descriptor);
+                } catch (e) {
+                    console.error('Error processing face:', e);
+                    alert('Error processing face. Please try again.');
+                    return;
+                }
+            }
+            
+            appState.prefects.push(newPrefect);
+            saveData();
+            initializeFaceDescriptors();
+            renderPrefectsTable();
+            updateDashboardStats();
+            
+            // Reset form
+            document.getElementById('prefect-cam-id').value = '';
+            document.getElementById('prefect-cam-name').value = '';
+            document.getElementById('prefect-cam-position').value = '';
+            document.getElementById('prefect-cam-class').value = '';
+            capturedPrefectImage = null;
+            document.getElementById('prefect-camera-result').innerHTML = '';
+            stopPrefectCamera();
+            
+            alert('Prefect registered successfully!');
+        }
+
+        // Teacher camera registration (similar to prefect)
+        async function toggleTeacherCamera() {
+            if (!modelsLoaded || !faceRecognitionEnabled) {
+                document.getElementById('teacher-camera-result').innerHTML = `<div class="scan-result error">Face recognition is not available. Please use manual entry.</div>`;
+                return;
+            }
+            
+            const btn = document.getElementById('teacher-camera-btn');
+            const view = document.getElementById('teacher-camera-view');
+            
+            if (!teacherVideoRunning) {
+                try {
+                    teacherVideoStream = await navigator.mediaDevices.getUserMedia({ video: {} });
+                    view.innerHTML = `<video id="teacher-video" autoplay muted></video>`;
+                    document.getElementById('teacher-video').srcObject = teacherVideoStream;
+                    teacherVideoRunning = true;
+                    btn.textContent = 'Stop Camera';
+                    btn.classList.remove('btn-primary');
+                    btn.classList.add('btn-danger');
+                    document.getElementById('teacher-capture-btn').disabled = false;
+                } catch (err) {
+                    console.error("Error accessing camera: ", err);
+                    view.innerHTML = `<span>Camera Access Denied</span>`;
+                }
+            } else {
+                stopTeacherCamera();
+            }
+        }
+
+        function stopTeacherCamera() {
+            if (teacherVideoStream) {
+                teacherVideoStream.getTracks().forEach(track => track.stop());
+                teacherVideoRunning = false;
+                document.getElementById('teacher-camera-view').innerHTML = '<span>Camera is Off</span>';
+                const btn = document.getElementById('teacher-camera-btn');
+                btn.textContent = 'Start Camera';
+                btn.classList.remove('btn-danger');
+                btn.classList.add('btn-primary');
+                document.getElementById('teacher-capture-btn').disabled = true;
+            }
+        }
+
+        function captureTeacherPhoto() {
+            const video = document.getElementById('teacher-video');
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0);
+            capturedTeacherImage = canvas.toDataURL('image/jpeg');
+            
+            // Show preview
+            document.getElementById('teacher-camera-result').innerHTML = `
+                <div class="scan-result success">Photo captured successfully!</div>
+                <img src="${capturedTeacherImage}" style="width: 100px; height: 100px; border-radius: 50%; margin-top: 1rem;">
+            `;
+        }
+
+        async function registerTeacherFromCamera() {
+            if (!capturedTeacherImage) {
+                alert('Please capture a photo first.');
+                return;
+            }
+            
+            const id = document.getElementById('teacher-cam-id').value.toUpperCase();
+            const name = document.getElementById('teacher-cam-name').value;
+            const subject = document.getElementById('teacher-cam-subject').value;
+            const className = document.getElementById('teacher-cam-class').value;
+            
+            if (!id || !name || !subject || !className) {
+                alert('Please fill in all fields.');
+                return;
+            }
+            
+            if (appState.teachers.some(t => t.id === id)) {
+                alert('A teacher with this ID already exists.');
+                return;
+            }
+            
+            const newTeacher = {
+                id,
+                name,
+                subject,
+                class: className,
+                imageBase64: capturedTeacherImage
+            };
+            
+            // Generate face descriptor if models are loaded
+            if (modelsLoaded && faceRecognitionEnabled) {
+                try {
+                    const img = await faceapi.fetchImage(capturedTeacherImage);
+                    const detections = await faceapi.detectAllFaces(img, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptors();
+                    
+                    if (detections.length === 0) {
+                        alert('No face detected in the photo. Please try again.');
+                        return;
+                    }
+                    if (detections.length > 1) {
+                        alert('Multiple faces detected. Please try again with only one person in frame.');
+                        return;
+                    }
+                    
+                    newTeacher.descriptor = Array.from(detections[0].descriptor);
+                } catch (e) {
+                    console.error('Error processing face:', e);
+                    alert('Error processing face. Please try again.');
+                    return;
+                }
+            }
+            
+            appState.teachers.push(newTeacher);
+            saveData();
+            initializeFaceDescriptors();
+            renderTeachersTable();
+            updateDashboardStats();
+            
+            // Reset form
+            document.getElementById('teacher-cam-id').value = '';
+            document.getElementById('teacher-cam-name').value = '';
+            document.getElementById('teacher-cam-subject').value = '';
+            document.getElementById('teacher-cam-class').value = '';
+            capturedTeacherImage = null;
+            document.getElementById('teacher-camera-result').innerHTML = '';
+            stopTeacherCamera();
+            
+            alert('Teacher registered successfully!');
+        }
+
+        // --- VISITOR MANAGEMENT ---
+        function toggleAddVisitorForm() {
+            const form = document.getElementById('add-visitor-form-container');
+            form.style.display = form.style.display === 'none' ? 'block' : 'none';
+        }
+
+        async function addNewVisitor(event) {
+            event.preventDefault();
+            const name = document.getElementById('visitor-name').value;
+            const purpose = document.getElementById('visitor-purpose').value;
+            const phone = document.getElementById('visitor-phone').value;
+            const date = document.getElementById('visitor-date').value;
+            const imagePreview = document.getElementById('visitor-image-preview');
+            
+            const newVisitor = {
+                id: 'V' + Date.now(),
+                name,
+                purpose,
+                phone,
+                date,
+                imageBase64: imagePreview.dataset.base64 || ''
+            };
+            
+            // Generate face descriptor if models are loaded and image is provided
+            if (modelsLoaded && faceRecognitionEnabled && newVisitor.imageBase64) {
+                try {
+                    const img = await faceapi.fetchImage(newVisitor.imageBase64);
+                    const detections = await faceapi.detectAllFaces(img, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptors();
+                    
+                    if (detections.length === 0) {
+                        alert('No face detected in the photo. Please upload a clear photo.');
+                        return;
+                    }
+                    if (detections.length > 1) {
+                        alert('Multiple faces detected. Please upload a photo with only one person.');
+                        return;
+                    }
+                    
+                    newVisitor.descriptor = Array.from(detections[0].descriptor);
+                } catch (e) {
+                    console.error('Error processing face:', e);
+                    alert('Error processing face. Please try again with a different photo.');
+                    return;
+                }
+            }
+            
+            appState.visitors.push(newVisitor);
+            saveData();
+            initializeFaceDescriptors();
+            renderVisitorsTable();
+            updateDashboardStats();
+            event.target.reset();
+            imagePreview.innerHTML = `<svg class="icon" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>`;
+            delete imagePreview.dataset.base64;
+            document.getElementById('add-visitor-form-container').style.display = 'none';
+        }
+
+        function renderVisitorsTable() {
+            const container = document.getElementById('visitors-table-container');
+            if (appState.visitors.length === 0) {
+                container.innerHTML = '<p class="empty-state">No visitors have been registered yet.</p>';
+                return;
+            }
+            let html = `<div class="table-container"><table class="data-table"><thead><tr><th>Photo</th><th>Name</th><th>Purpose</th><th>Phone</th><th>Date</th><th>Status</th></tr></thead><tbody>`;
+            appState.visitors.forEach(v => {
+                const photoSrc = v.imageBase64 || 'https://i.pravatar.cc/40';
+                const status = v.checkInTime ? (v.checkOutTime ? 'Checked Out' : 'Checked In') : 'Not Checked In';
+                const statusClass = v.checkOutTime ? 'badge-warning' : (v.checkInTime ? 'badge-success' : 'badge-danger');
+                html += `<tr>
+                    <td><img src="${photoSrc}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;"></td>
+                    <td>${v.name}</td>
+                    <td>${v.purpose}</td>
+                    <td>${v.phone || 'N/A'}</td>
+                    <td>${v.date}</td>
+                    <td><span class="badge ${statusClass}">${status}</span></td>
+                </tr>`;
+            });
+            html += `</tbody></table></div>`;
+            container.innerHTML = html;
+        }
+
+        function checkInVisitor(e) {
+            e.preventDefault();
+            const name = document.getElementById('checkin-name').value;
+            const visitor = appState.visitors.find(v => v.name.toLowerCase() === name.toLowerCase());
+            
+            if (!visitor) {
+                document.getElementById('checkin-result').innerHTML = `<div class="scan-result error">Visitor not found. Please register the visitor first.</div>`;
+                return;
+            }
+            
+            if (visitor.checkInTime && !visitor.checkOutTime) {
+                document.getElementById('checkin-result').innerHTML = `<div class="scan-result error">${visitor.name} is already checked in.</div>`;
+                return;
+            }
+            
+            visitor.checkInTime = new Date().toLocaleTimeString();
+            saveData();
+            renderVisitorsTable();
+            document.getElementById('checkin-result').innerHTML = `<div class="scan-result success">${visitor.name} checked in successfully at ${visitor.checkInTime}</div>`;
+            e.target.reset();
+        }
+
+        function checkOutVisitor(e) {
+            e.preventDefault();
+            const name = document.getElementById('checkout-name').value;
+            const visitor = appState.visitors.find(v => v.name.toLowerCase() === name.toLowerCase());
+            
+            if (!visitor) {
+                document.getElementById('checkout-result').innerHTML = `<div class="scan-result error">Visitor not found.</div>`;
+                return;
+            }
+            
+            if (!visitor.checkInTime || visitor.checkOutTime) {
+                document.getElementById('checkout-result').innerHTML = `<div class="scan-result error">${visitor.name} is not checked in.</div>`;
+                return;
+            }
+            
+            visitor.checkOutTime = new Date().toLocaleTimeString();
+            saveData();
+            renderVisitorsTable();
+            document.getElementById('checkout-result').innerHTML = `<div class="scan-result success">${visitor.name} checked out successfully at ${visitor.checkOutTime}</div>`;
+            e.target.reset();
+        }
+
+        // Visitor camera registration
+        async function toggleVisitorCamera() {
+            if (!modelsLoaded || !faceRecognitionEnabled) {
+                document.getElementById('visitor-camera-result').innerHTML = `<div class="scan-result error">Face recognition is not available. Please use manual entry.</div>`;
+                return;
+            }
+            
+            const btn = document.getElementById('visitor-camera-btn');
+            const view = document.getElementById('visitor-camera-view');
+            
+            if (!visitorVideoRunning) {
+                try {
+                    visitorVideoStream = await navigator.mediaDevices.getUserMedia({ video: {} });
+                    view.innerHTML = `<video id="visitor-video" autoplay muted></video>`;
+                    document.getElementById('visitor-video').srcObject = visitorVideoStream;
+                    visitorVideoRunning = true;
+                    btn.textContent = 'Stop Camera';
+                    btn.classList.remove('btn-primary');
+                    btn.classList.add('btn-danger');
+                    document.getElementById('visitor-capture-btn').disabled = false;
+                } catch (err) {
+                    console.error("Error accessing camera: ", err);
+                    view.innerHTML = `<span>Camera Access Denied</span>`;
+                }
+            } else {
+                stopVisitorCamera();
+            }
+        }
+
+        function stopVisitorCamera() {
+            if (visitorVideoStream) {
+                visitorVideoStream.getTracks().forEach(track => track.stop());
+                visitorVideoRunning = false;
+                document.getElementById('visitor-camera-view').innerHTML = '<span>Camera is Off</span>';
+                const btn = document.getElementById('visitor-camera-btn');
+                btn.textContent = 'Start Camera';
+                btn.classList.remove('btn-danger');
+                btn.classList.add('btn-primary');
+                document.getElementById('visitor-capture-btn').disabled = true;
+            }
+        }
+
+        function captureVisitorPhoto() {
+            const video = document.getElementById('visitor-video');
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0);
+            capturedVisitorImage = canvas.toDataURL('image/jpeg');
+            
+            // Show preview
+            document.getElementById('visitor-camera-result').innerHTML = `
+                <div class="scan-result success">Photo captured successfully!</div>
+                <img src="${capturedVisitorImage}" style="width: 100px; height: 100px; border-radius: 50%; margin-top: 1rem;">
+            `;
+        }
+
+        async function registerVisitorFromCamera() {
+            if (!capturedVisitorImage) {
+                alert('Please capture a photo first.');
+                return;
+            }
+            
+            const name = document.getElementById('visitor-cam-name').value;
+            const purpose = document.getElementById('visitor-cam-purpose').value;
+            const phone = document.getElementById('visitor-cam-phone').value;
+            const date = document.getElementById('visitor-cam-date').value;
+            
+            if (!name || !purpose || !date) {
+                alert('Please fill in all required fields.');
+                return;
+            }
+            
+            const newVisitor = {
+                id: 'V' + Date.now(),
+                name,
+                purpose,
+                phone,
+                date,
+                imageBase64: capturedVisitorImage
+            };
+            
+            // Generate face descriptor if models are loaded
+            if (modelsLoaded && faceRecognitionEnabled) {
+                try {
+                    const img = await faceapi.fetchImage(capturedVisitorImage);
+                    const detections = await faceapi.detectAllFaces(img, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptors();
+                    
+                    if (detections.length === 0) {
+                        alert('No face detected in the photo. Please try again.');
+                        return;
+                    }
+                    if (detections.length > 1) {
+                        alert('Multiple faces detected. Please try again with only one person in frame.');
+                        return;
+                    }
+                    
+                    newVisitor.descriptor = Array.from(detections[0].descriptor);
+                } catch (e) {
+                    console.error('Error processing face:', e);
+                    alert('Error processing face. Please try again.');
+                    return;
+                }
+            }
+            
+            appState.visitors.push(newVisitor);
+            saveData();
+            initializeFaceDescriptors();
+            renderVisitorsTable();
+            updateDashboardStats();
+            
+            // Reset form
+            document.getElementById('visitor-cam-name').value = '';
+            document.getElementById('visitor-cam-purpose').value = '';
+            document.getElementById('visitor-cam-phone').value = '';
+            capturedVisitorImage = null;
+            document.getElementById('visitor-camera-result').innerHTML = '';
+            stopVisitorCamera();
+            
+            alert('Visitor registered successfully!');
+        }
+
+        // Visitor face recognition check-in
+        async function toggleVisitorRecognition() {
+            if (!modelsLoaded || !faceRecognitionEnabled) {
+                document.getElementById('visitor-recognition-result').innerHTML = `<div class="scan-result error">Face recognition is not available.</div>`;
+                return;
+            }
+            
+            const btn = document.getElementById('visitor-recognition-btn');
+            const view = document.getElementById('visitor-recognition-view');
+            
+            if (!visitorRecognitionRunning) {
+                try {
+                    visitorRecognitionStream = await navigator.mediaDevices.getUserMedia({ video: {} });
+                    view.innerHTML = `<video id="visitor-recognition-video" autoplay muted></video>`;
+                    document.getElementById('visitor-recognition-video').srcObject = visitorRecognitionStream;
+                    visitorRecognitionRunning = true;
+                    btn.textContent = 'Identify Visitor';
+                    btn.classList.remove('btn-primary');
+                    btn.classList.add('btn-success');
+                } catch (err) {
+                    console.error("Error accessing camera: ", err);
+                    view.innerHTML = `<span>Camera Access Denied</span>`;
+                }
+            } else {
+                identifyVisitorFace();
+            }
+        }
+
+        async function identifyVisitorFace() {
+            if (!modelsLoaded || !faceRecognitionEnabled) {
+                document.getElementById('visitor-recognition-result').innerHTML = `<div class="scan-result error">AI models not loaded or face recognition disabled.</div>`;
+                return;
+            }
+            
+            const view = document.getElementById('visitor-recognition-view');
+            const resultDiv = document.getElementById('visitor-recognition-result');
+            const btn = document.getElementById('visitor-recognition-btn');
+            view.classList.add('scanning');
+            btn.disabled = true;
+            resultDiv.innerHTML = '';
+
+            try {
+                const video = document.getElementById('visitor-recognition-video');
+                const detections = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptors();
+
+                if (detections.length > 0) {
+                    const descriptor = detections[0].descriptor;
+                    
+                    if (faceDescriptors.visitor.length === 0) {
+                        resultDiv.innerHTML = `<div class="scan-result error">No registered visitors found.</div>`;
+                    } else {
+                        const matchedVisitor = faceapi.findBestMatch(descriptor, faceDescriptors.visitor.map(d => d.descriptor));
+                        
+                        if (matchedVisitor.distance < RECOGNITION_THRESHOLD) {
+                            const visitor = faceDescriptors.visitor.find(d => d.descriptor === matchedVisitor.descriptor);
+                            const visitorData = appState.visitors.find(v => v.id === visitor.id);
+                            
+                            if (visitorData.checkInTime && !visitorData.checkOutTime) {
+                                resultDiv.innerHTML = `<div class="scan-result error">${visitorData.name} is already checked in.</div>`;
+                            } else {
+                                visitorData.checkInTime = new Date().toLocaleTimeString();
+                                saveData();
+                                renderVisitorsTable();
+                                resultDiv.innerHTML = `<div class="scan-result success">Welcome, ${visitorData.name}! Checked in at ${visitorData.checkInTime}</div>`;
+                            }
+                        } else {
+                            resultDiv.innerHTML = `<div class="scan-result error">Face not recognized. Please register the visitor first.</div>`;
+                        }
+                    }
+                } else {
+                    resultDiv.innerHTML = `<div class="scan-result error">No face detected. Please try again.</div>`;
+                }
+            } catch (e) {
+                console.error('Error during face recognition:', e);
+                resultDiv.innerHTML = `<div class="scan-result error">Error during face recognition. Please try again.</div>`;
+            }
+
+            view.classList.remove('scanning');
+            btn.disabled = false;
+        }
+
+        // --- ATTENDANCE ---
+        function setAttendanceType(type) { 
+            currentAttendanceType = type; 
+        }
+        
+        function markAttendanceById(e) {
+            e.preventDefault();
+            const id = document.getElementById('attendance-id').value.toUpperCase();
+            const person = [...appState.prefects, ...appState.teachers].find(p => p.id === id);
+            const resultDiv = document.getElementById('id-mark-result');
+            const today = new Date().toISOString().split('T')[0];
+            if (!person) { 
+                resultDiv.innerHTML = `<p class="scan-result error">Error: No one found with ID ${id}.</p>`; 
+                return; 
+            }
+            if (appState.attendanceRecords.some(r => r.personId === id && r.date === today)) { 
+                resultDiv.innerHTML = `<p class="scan-result error">${person.name} is already marked present for today.</p>`; 
+                return; 
+            }
+            appState.attendanceRecords.push({ personId: id, type: currentAttendanceType, date: today, time: new Date().toLocaleTimeString() });
+            saveData();
+            updateDashboardStats();
+            resultDiv.innerHTML = `<p class="scan-result success">Success! ${person.name} marked as Present.</p>`;
+            e.target.reset();
+        }
+
+        async function toggleCamera() {
+            if (!modelsLoaded || !faceRecognitionEnabled) {
+                document.getElementById('camera-scan-result').innerHTML = `<div class="scan-result error">Face recognition is not available. Please use ID-based attendance.</div>`;
+                return;
+            }
+            
+            const btn = document.getElementById('camera-btn');
+            const view = document.getElementById('camera-view');
+            if (!isVideoRunning) {
+                try {
+                    videoStream = await navigator.mediaDevices.getUserMedia({ video: {} });
+                    view.innerHTML = `<video id="video" autoplay muted></video>`;
+                    document.getElementById('video').srcObject = videoStream;
+                    isVideoRunning = true;
+                    btn.textContent = 'Identify Person';
+                    btn.classList.remove('btn-primary');
+                    btn.classList.add('btn-success');
+                } catch (err) {
+                    console.error("Error accessing camera: ", err);
+                    view.innerHTML = `<span>Camera Access Denied</span>`;
+                }
+            } else {
+                identifyPerson();
+            }
+        }
+
+        async function identifyPerson() {
+            if (!modelsLoaded || !faceRecognitionEnabled) {
+                document.getElementById('camera-scan-result').innerHTML = `<div class="scan-result error">AI models not loaded or face recognition disabled.</div>`;
+                return;
+            }
+            
+            const view = document.getElementById('camera-view');
+            const resultDiv = document.getElementById('camera-scan-result');
+            const btn = document.getElementById('camera-btn');
+            view.classList.add('scanning');
+            btn.disabled = true;
+            resultDiv.innerHTML = '';
+
+            try {
+                const video = document.getElementById('video');
+                const detections = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptors();
+
+                if (detections.length > 0) {
+                    const descriptor = detections[0].descriptor;
+                    const matchedPerson = findBestMatch(descriptor);
+                    if (matchedPerson && matchedPerson.distance < RECOGNITION_THRESHOLD) {
+                        const today = new Date().toISOString().split('T')[0];
+                        if (appState.attendanceRecords.some(r => r.personId === matchedPerson._label && r.date === today)) {
+                            resultDiv.innerHTML = `<div class="scan-result info">${matchedPerson._label} is already marked present for today.</div>`;
+                        } else {
+                            appState.attendanceRecords.push({ personId: matchedPerson._label, type: currentAttendanceType, date: today, time: new Date().toLocaleTimeString() });
+                            saveData();
+                            updateDashboardStats();
+                            resultDiv.innerHTML = `<div class="scan-result success">Identified: ${matchedPerson._label} - Marked Present!</div>`;
+                        }
+                    } else {
+                        resultDiv.innerHTML = `<div class="scan-result error">Face not recognized. Please try again.</div>`;
+                    }
+                } else {
+                    resultDiv.innerHTML = `<div class="scan-result error">No face detected. Please try again.</div>`;
+                }
+            } catch (e) {
+                console.error('Error during face recognition:', e);
+                resultDiv.innerHTML = `<div class="scan-result error">Error during face recognition. Please try again.</div>`;
+            }
+
+            view.classList.remove('scanning');
+            btn.disabled = false;
+        }
+
+        function findBestMatch(queryDescriptor) {
+            const descriptors = faceDescriptors[currentAttendanceType];
+            if (descriptors.length === 0) return null;
+            return faceapi.findBestMatch(queryDescriptor, descriptors.map(d => d.descriptor));
+        }
+
+        function stopCamera() {
+            if (videoStream) {
+                videoStream.getTracks().forEach(track => track.stop());
+                isVideoRunning = false;
+                document.getElementById('camera-view').innerHTML = '<span>Camera is Off</span>';
+                const btn = document.getElementById('camera-btn');
+                btn.textContent = 'Start Camera';
+                btn.classList.remove('btn-success');
+                btn.classList.add('btn-primary');
+            }
+        }
+
+        function stopAllCameras() {
+            stopCamera();
+            stopLoginCamera();
+            stopPrefectCamera();
+            stopTeacherCamera();
+            stopVisitorCamera();
+            if (visitorRecognitionStream) {
+                visitorRecognitionStream.getTracks().forEach(track => track.stop());
+                visitorRecognitionRunning = false;
+            }
+        }
+
+        function downloadAttendanceReport(e) {
+            e.preventDefault();
+            const date = document.getElementById('attendance-date').value;
+            const records = appState.attendanceRecords.filter(r => r.date === date);
+            if (records.length === 0) { 
+                alert(`No attendance records found for ${date}.`); 
+                return; 
+            }
+            let csv = 'Person ID,Name,Type,Date,Time\n';
+            records.forEach(record => {
+                const person = [...appState.prefects, ...appState.teachers].find(p => p.id === record.personId);
+                csv += `${record.personId},${person ? person.name : 'N/A'},${record.type},${record.date},${record.time}\n`;
+            });
+            downloadCSV(csv, `attendance_report_${date}.csv`);
+        }
+
+        function downloadAttendancePDF() {
+            const date = document.getElementById('attendance-date').value;
+            const records = appState.attendanceRecords.filter(r => r.date === date);
+            if (records.length === 0) { 
+                alert(`No attendance records found for ${date}.`); 
+                return; 
+            }
+            
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            // Add title
+            doc.setFontSize(18);
+            doc.text('Attendance Report', 105, 20, { align: 'center' });
+            
+            // Add date
+            doc.setFontSize(12);
+            doc.text(`Date: ${date}`, 20, 30);
+            
+            // Add table headers
+            doc.setFontSize(10);
+            doc.text('ID', 20, 45);
+            doc.text('Name', 50, 45);
+            doc.text('Type', 100, 45);
+            doc.text('Time', 140, 45);
+            
+            // Add table data
+            let yPosition = 55;
+            records.forEach(record => {
+                const person = [...appState.prefects, ...appState.teachers].find(p => p.id === record.personId);
+                doc.text(record.personId, 20, yPosition);
+                doc.text(person ? person.name : 'N/A', 50, yPosition);
+                doc.text(record.type, 100, yPosition);
+                doc.text(record.time, 140, yPosition);
+                yPosition += 10;
+                
+                // Add new page if needed
+                if (yPosition > 270) {
+                    doc.addPage();
+                    yPosition = 20;
+                }
+            });
+            
+            // Save the PDF
+            doc.save(`attendance_report_${date}.pdf`);
+        }
+
+        // --- LOGBOOK & ANNOUNCEMENTS ---
+        function addLogbookEntry(e) {
+            e.preventDefault();
+            const title = document.getElementById('log-title').value;
+            const date = document.getElementById('log-date').value;
+            const details = document.getElementById('log-details').value;
+            appState.logbookEntries.unshift({ date, title, details });
+            saveData();
+            renderLogbook();
+            updateDashboardStats();
+            renderRecentActivity();
+            e.target.reset();
+            document.getElementById('log-date').value = new Date().toISOString().split('T')[0];
+        }
+        
+        function renderLogbook() {
+            const container = document.getElementById('logbook-tbody-container');
+            if (appState.logbookEntries.length === 0) { 
+                container.innerHTML = '<p class="empty-state">No logbook entries have been added yet.</p>'; 
+                return; 
+            }
+            let html = `<div class="table-container"><table class="data-table"><thead><tr><th>Date</th><th>Title</th><th>Details</th></tr></thead><tbody>`;
+            appState.logbookEntries.forEach(e => { 
+                html += `<tr><td>${e.date}</td><td>${e.title}</td><td>${e.details}</td></tr>`; 
+            });
+            html += `</tbody></table></div>`; 
+            container.innerHTML = html;
+        }
+        
+        function addAnnouncement(e) {
+            e.preventDefault();
+            const title = document.getElementById('announcement-title').value;
+            const message = document.getElementById('announcement-message').value;
+            const today = new Date().toISOString().split('T')[0];
+            appState.announcements.unshift({ title, message, date: today });
+            saveData();
+            renderAnnouncements();
+            renderRecentActivity();
+            e.target.reset();
+        }
+        
+        function renderAnnouncements() {
+            const listContainer = document.getElementById('announcements-list');
+            if (appState.announcements.length === 0) { 
+                listContainer.innerHTML = '<p class="empty-state">No announcements have been posted yet.</p>'; 
+                return; 
+            }
+            listContainer.innerHTML = appState.announcements.map(a => `
+                <div class="card" style="margin-top: 1rem;">
+                    <h3>${a.title}</h3>
+                    <p style="margin-top: 0.5rem;">${a.message}</p>
+                    <p style="margin-top: 1rem; font-size: 0.875rem; color: var(--text-muted);">Posted on: ${a.date}</p>
+                </div>
+            `).join('');
+        }
+        
+        function downloadLogbookReport(e) {
+            e.preventDefault();
+            const startDate = document.getElementById('log-start-date').value;
+            const endDate = document.getElementById('log-end-date').value;
+            const entries = appState.logbookEntries.filter(e => e.date >= startDate && e.date <= endDate);
+            if (entries.length === 0) { 
+                alert(`No logbook entries found between ${startDate} and ${endDate}.`); 
+                return; 
+            }
+            let csv = 'Date,Title,Details\n';
+            entries.forEach(e => { 
+                csv += `${e.date},${e.title},"${e.details.replace(/"/g, '""')}"\n`; 
+            });
+            downloadCSV(csv, `logbook_report_${startDate}_to_${endDate}.csv`);
+        }
+
+        function downloadLogbookPDF() {
+            const startDate = document.getElementById('log-start-date').value;
+            const endDate = document.getElementById('log-end-date').value;
+            const entries = appState.logbookEntries.filter(e => e.date >= startDate && e.date <= endDate);
+            if (entries.length === 0) { 
+                alert(`No logbook entries found between ${startDate} and ${endDate}.`); 
+                return; 
+            }
+            
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            // Add title
+            doc.setFontSize(18);
+            doc.text('Logbook Report', 105, 20, { align: 'center' });
+            
+            // Add date range
+            doc.setFontSize(12);
+            doc.text(`Date Range: ${startDate} to ${endDate}`, 20, 30);
+            
+            // Add entries
+            let yPosition = 45;
+            entries.forEach(entry => {
+                // Check if we need a new page
+                if (yPosition > 250) {
+                    doc.addPage();
+                    yPosition = 20;
+                }
+                
+                // Add entry title
+                doc.setFontSize(14);
+                doc.text(entry.title, 20, yPosition);
+                yPosition += 10;
+                
+                // Add entry date
+                doc.setFontSize(10);
+                doc.text(`Date: ${entry.date}`, 20, yPosition);
+                yPosition += 10;
+                
+                // Add entry details (with word wrap)
+                const splitDetails = doc.splitTextToSize(entry.details, 170);
+                doc.text(splitDetails, 20, yPosition);
+                yPosition += splitDetails.length * 5 + 10;
+            });
+            
+            // Save the PDF
+            doc.save(`logbook_report_${startDate}_to_${endDate}.pdf`);
+        }
+
+        // --- SETTINGS & DATA MANAGEMENT ---
+        function toggleFaceRecognition() {
+            faceRecognitionEnabled = document.getElementById('face-recognition-enabled').checked;
+            localStorage.setItem('faceRecognitionEnabled', faceRecognitionEnabled.toString());
+            
+            if (!faceRecognitionEnabled) {
+                stopAllCameras();
+            }
+        }
+
+        function updateThreshold(value) {
+            RECOGNITION_THRESHOLD = parseFloat(value);
+            document.getElementById('threshold-value').textContent = value;
+            localStorage.setItem('recognitionThreshold', value);
+        }
+
+        function exportAllData() {
+            const dataStr = JSON.stringify(appState, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a'); 
+            link.href = url; 
+            link.download = `school_system_backup_${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(link); 
+            link.click(); 
+            document.body.removeChild(link); 
+            URL.revokeObjectURL(url);
+        }
+        
+        function importAllData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    // Basic validation
+                    if (importedData.prefects && importedData.teachers && importedData.logbook) {
+                        appState = importedData;
+                        saveData();
+                        initializeApp();
+                        alert('Data imported successfully! The page will now refresh.');
+                        window.location.reload();
+                    } else {
+                        alert('Invalid data file. Please select a valid backup file.');
+                    }
+                } catch (error) {
+                    alert('Failed to parse the file. Please ensure it is a correct JSON backup.');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function confirmClearAllData() { 
+            if (confirm("Are you absolutely sure? This action will delete ALL data, including photos, and cannot be undone.")) { 
+                clearAllData(); 
+                appState = { prefects: [], teachers: [], visitors: [], logbookEntries: [], announcements: [], attendanceRecords: [] }; 
+                initializeApp(); 
+                alert("All data has been cleared."); 
+            } 
+        }
+
+        // --- UTILITY ---
+        function downloadCSV(csvString, filename) {
+            const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a'); 
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url); 
+            link.setAttribute('download', filename); 
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link); 
+            link.click(); 
+            document.body.removeChild(link);
+        }
+    </script>
+</body>
+</html>
